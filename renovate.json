@@ -1,3 +1,1 @@
-{
-  "$schema": "https://docs.renovatebot.com/renovate-schema.json"
-}
+{"$schema": "https://docs.renovatebot.com/renovate-schema.json", "packageRules": [{"matchPackagePatterns": ["ipdb", "ipython"], "groupName": "poetry-deps"}]}
