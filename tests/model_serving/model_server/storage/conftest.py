@@ -19,7 +19,7 @@ from utilities.serving_runtime import ServingRuntimeFromTemplate
 
 @pytest.fixture(scope="session")
 def aws_access_key() -> Optional[str]:
-    access_key = py_config.get("aws_access_key", os.environ.get("AWS_ACCESS_KEY_ID"))
+    access_key = py_config.get("aws_access_key_id", os.environ.get("AWS_ACCESS_KEY_ID"))
     if not access_key:
         raise ValueError("AWS access key is not set")
 
@@ -28,7 +28,7 @@ def aws_access_key() -> Optional[str]:
 
 @pytest.fixture(scope="session")
 def aws_secret_access_key() -> Optional[str]:
-    secret_access_key = py_config.get("aws_secret_key", os.environ.get("AWS_SECRET_ACCESS_KEY"))
+    secret_access_key = py_config.get("aws_secret_access_key", os.environ.get("AWS_SECRET_ACCESS_KEY"))
     if not secret_access_key:
         raise ValueError("AWS secret key is not set")
 
