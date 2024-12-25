@@ -3,8 +3,7 @@ from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 from ocp_resources.serving_runtime import ServingRuntime
 from ocp_resources.template import Template
-
-from utilities.constants import APPLICATIONS_NAMESPACE
+from pytest_testconfig import config as py_config
 
 
 class ServingRuntimeFromTemplate(ServingRuntime):
@@ -34,7 +33,7 @@ class ServingRuntimeFromTemplate(ServingRuntime):
         template = Template(
             client=self.client,
             name=self.template_name,
-            namespace=APPLICATIONS_NAMESPACE,
+            namespace=py_config["applications_namespace"],
         )
         if template.exists:
             return template

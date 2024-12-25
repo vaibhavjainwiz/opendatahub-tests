@@ -2,8 +2,7 @@ import pytest
 from kubernetes.dynamic import DynamicClient
 from ocp_resources.deployment import Deployment
 from ocp_resources.exceptions import MissingResourceResError
-
-from utilities.constants import APPLICATIONS_NAMESPACE
+from pytest_testconfig import config as py_config
 
 
 @pytest.fixture(scope="class")
@@ -11,7 +10,7 @@ def odh_model_controller_deployment(admin_client: DynamicClient):
     deployment = Deployment(
         client=admin_client,
         name="odh-model-controller",
-        namespace=APPLICATIONS_NAMESPACE,
+        namespace=py_config["applications_namespace"],
     )
     if deployment.exists:
         return deployment

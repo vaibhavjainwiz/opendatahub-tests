@@ -1,6 +1,3 @@
-APPLICATIONS_NAMESPACE: str = "redhat-ods-applications"
-
-
 class KServeDeploymentType:
     SERVERLESS: str = "Serverless"
     RAW_DEPLOYMENT: str = "RawDeployment"
@@ -8,6 +5,7 @@ class KServeDeploymentType:
 
 class ModelFormat:
     CAIKIT: str = "caikit"
+    ONNX: str = "onnx"
 
 
 class ModelName:
@@ -42,6 +40,7 @@ class Protocols:
     HTTP: str = "http"
     HTTPS: str = "https"
     GRPC: str = "grpc"
+    TCP_PROTOCOLS: set[str] = {HTTP, HTTPS}
 
 
 class AcceleratorType:

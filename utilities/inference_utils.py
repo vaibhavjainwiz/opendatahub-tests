@@ -8,10 +8,16 @@ from typing import Any, Dict, Optional
 from urllib.parse import urlparse
 
 from ocp_resources.inference_service import InferenceService
+from ocp_resources.service import Service
 from pyhelper_utils.shell import run_command
 from simple_logger.logger import get_logger
 
+from tests.model_serving.model_server.utils import (
+    get_services_by_isvc_label,
+)
+from utilities.constants import KServeDeploymentType, Protocols
 from utilities.manifests.runtime_query_config import RUNTIMES_QUERY_CONFIG
+import portforward
 
 LOGGER = get_logger(name=__name__)
 
@@ -27,14 +33,40 @@ class Inference:
         """
         self.inference_service = inference_service
         self.runtime = runtime
+        self.visibility_exposed = self.is_service_exposed()
+
         self.inference_url = self.get_inference_url()
 
     def get_inference_url(self) -> str:
         # TODO: add ModelMesh support
-        if url := self.inference_service.instance.status.components.predictor.url:
-            return urlparse(url).netloc
+        if self.visibility_exposed:
+            if url := self.inference_service.instance.status.components.predictor.url:
+                return urlparse(url).netloc
+            else:
+                raise ValueError(f"{self.inference_service.name}: No url found in InferenceService status")
+
         else:
-            raise ValueError(f"{self.inference_service.name}: No url found in InferenceService status")
+            return "localhost"
+
+    def is_service_exposed(self) -> bool:
+        labels = self.inference_service.labels
+        inference_type = self.inference_service.instance.metadata.annotations["serving.kserve.io/deploymentMode"]
+
+        if inference_type == KServeDeploymentType.RAW_DEPLOYMENT:
+            if labels and labels.get("networking.kserve.io/visibility") == "exposed":
+                return True
+            else:
+                return False
+
+        elif inference_type == KServeDeploymentType.SERVERLESS:
+            if labels and labels.get("networking.knative.dev/visibility") == "cluster-local":
+                return False
+            else:
+                return True
+
+        else:
+            # TODO: add support for ModelMesh
+            return False
 
 
 class LlmInference(Inference):
@@ -55,11 +87,12 @@ class LlmInference(Inference):
 
     def get_runtime_config(self) -> Dict[str, Any]:
         if inference_type := self.inference_config.get(self.inference_type):
-            if data := inference_type.get(self.protocol):
+            protocol = Protocols.HTTP if self.protocol in Protocols.TCP_PROTOCOLS else self.protocol
+            if data := inference_type.get(protocol):
                 return data
 
             else:
-                raise ValueError(f"Protocol {self.protocol} not supported.\nSupported protocols are {inference_type}")
+                raise ValueError(f"Protocol {protocol} not supported.\nSupported protocols are {inference_type}")
 
         else:
             raise ValueError(
@@ -90,8 +123,8 @@ class LlmInference(Inference):
             query_text=text,
         )
 
-        if self.protocol == "http":
-            url = f"https://{self.inference_url}/{self.runtime_config['endpoint']}"
+        if self.protocol in Protocols.TCP_PROTOCOLS:
+            url = f"{self.protocol}://{self.inference_url}/{self.runtime_config['endpoint']}"
             cmd_exec = "curl -i -s"
 
         elif self.protocol == "grpc":
@@ -129,12 +162,29 @@ class LlmInference(Inference):
             token=token,
         )
 
-        res, out, err = run_command(command=shlex.split(cmd), verify_stderr=False, check=False)
+        # For internal inference, we need to use port forwarding to the service
+        if not self.visibility_exposed:
+            svc = get_services_by_isvc_label(client=self.inference_service.client, isvc=self.inference_service)[0]
+
+            port = self.get_target_port(svc=svc)
+            cmd = cmd.replace("localhost", f"localhost:{port}")
+
+            with portforward.forward(
+                pod_or_service=svc.name,
+                namespace=svc.namespace,
+                from_port=port,
+                to_port=port,
+            ):
+                res, out, err = run_command(command=shlex.split(cmd), verify_stderr=False, check=False)
+
+        else:
+            res, out, err = run_command(command=shlex.split(cmd), verify_stderr=False, check=False)
+
         if not res:
             raise ValueError(f"Inference failed with error: {err}\nOutput: {out}\nCommand: {cmd}")
 
         try:
-            if self.protocol == "http":
+            if self.protocol in Protocols.TCP_PROTOCOLS:
                 # with curl response headers are also returned
                 response_dict = {}
                 response_list = out.splitlines()
@@ -150,3 +200,16 @@ class LlmInference(Inference):
 
         except JSONDecodeError:
             return {"output": out}
+
+    def get_target_port(self, svc: Service) -> int:
+        if self.protocol in Protocols.TCP_PROTOCOLS:
+            svc_protocol = "TCP"
+        elif self.protocol == Protocols.GRPC:
+            svc_protocol = "h2c"
+        else:
+            svc_protocol = self.protocol
+
+        if port := [item.targetPort for item in svc.instance.spec.ports if item.protocol == svc_protocol]:
+            return port[0]
+
+        raise ValueError(f"No port found for protocol {self.protocol} service {svc.name}")
