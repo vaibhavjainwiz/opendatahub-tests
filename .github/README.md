@@ -22,7 +22,6 @@
 
 
 ## To be added
-- When a new PR is opened, add a comment with supported user actions
 - When a PR is opened, assign the PR to the PR owner
 - When a PR is opened, add reviewers (requires updates to OWNERS file(s))
 - When a PR is reviewed/commented by a user who's not the PR owner, add `reviewed|commented|approved-by-<username>` label
