@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import json
+import shlex
 from contextlib import contextmanager
 from typing import Dict, Generator, List, Optional
 
@@ -7,30 +10,51 @@ from kubernetes.dynamic.exceptions import ResourceNotFoundError, ResourceNotUniq
 from ocp_resources.deployment import Deployment
 from ocp_resources.inference_service import InferenceService
 from ocp_resources.namespace import Namespace
+from ocp_resources.project_project_openshift_io import Project
+from ocp_resources.project_request import ProjectRequest
 from ocp_resources.role import Role
 from ocp_resources.secret import Secret
+from pyhelper_utils.shell import run_command
+from simple_logger.logger import get_logger
 
 from tests.model_serving.model_server.utils import b64_encoded_string
 from utilities.general import get_s3_secret_dict
 
 
+LOGGER = get_logger(name=__name__)
+TIMEOUT_2MIN = 2 * 60
+
+
 @contextmanager
 def create_ns(
     name: str,
-    admin_client: DynamicClient,
+    admin_client: Optional[DynamicClient] = None,
+    unprivileged_client: Optional[DynamicClient] = None,
     teardown: bool = True,
     delete_timeout: int = 4 * 60,
     labels: Optional[Dict[str, str]] = None,
 ) -> Generator[Namespace, None, None]:
-    with Namespace(
-        client=admin_client,
-        name=name,
-        label=labels,
-        teardown=teardown,
-        delete_timeout=delete_timeout,
-    ) as ns:
-        ns.wait_for_status(status=Namespace.Status.ACTIVE, timeout=2 * 10)
-        yield ns
+    if unprivileged_client:
+        with ProjectRequest(name=name, client=unprivileged_client, teardown=teardown):
+            project = Project(
+                name=name,
+                client=unprivileged_client,
+                teardown=teardown,
+                delete_timeout=delete_timeout,
+            )
+            project.wait_for_status(project.Status.ACTIVE, timeout=TIMEOUT_2MIN)
+            yield project
+
+    else:
+        with Namespace(
+            client=admin_client,
+            name=name,
+            label=labels,
+            teardown=teardown,
+            delete_timeout=delete_timeout,
+        ) as ns:
+            ns.wait_for_status(status=Namespace.Status.ACTIVE, timeout=TIMEOUT_2MIN)
+            yield ns
 
 
 def wait_for_kserve_predictor_deployment_replicas(client: DynamicClient, isvc: InferenceService) -> Deployment:
@@ -141,3 +165,24 @@ def create_isvc_view_role(
         rules=rules,
     ) as role:
         yield role
+
+
+def login_with_user_password(api_address: str, user: str, password: str | None = None) -> bool:
+    """
+    Log in to an OpenShift cluster using a username and password.
+
+    Args:
+        api_address (str): The API address of the OpenShift cluster.
+        user (str): Cluster's username
+        password (str, optional): Cluster's password
+
+    Returns:
+        bool: True if login is successful otherwise False.
+    """
+    login_command: str = f"oc login  --insecure-skip-tls-verify=true {api_address} -u {user}"
+    if password:
+        login_command += f" -p '{password}'"
+
+    _, out, _ = run_command(command=shlex.split(login_command))
+
+    return "Login successful" in out
