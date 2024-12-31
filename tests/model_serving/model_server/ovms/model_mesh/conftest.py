@@ -19,6 +19,7 @@ from utilities.constants import (
     KServeDeploymentType,
     ModelAndFormat,
     ModelFormat,
+    ModelVersion,
     Protocols,
     RuntimeQueryKeys,
     RuntimeTemplates,
@@ -49,7 +50,7 @@ def http_s3_openvino_model_mesh_serving_runtime(
 
 
 @pytest.fixture(scope="class")
-def ci_endpoint_s3_secret(
+def ci_model_mesh_endpoint_s3_secret(
     admin_client: DynamicClient,
     ns_with_modelmesh_enabled: Namespace,
     aws_access_key_id: str,
@@ -74,7 +75,7 @@ def ci_endpoint_s3_secret(
 @pytest.fixture(scope="class")
 def storage_config_secret(
     admin_client: DynamicClient,
-    ci_endpoint_s3_secret: Secret,
+    ci_model_mesh_endpoint_s3_secret: Secret,
     aws_access_key_id: str,
     aws_secret_access_key: str,
     ci_s3_bucket_name: str,
@@ -83,8 +84,8 @@ def storage_config_secret(
 ) -> Generator[Secret, None, None]:
     with create_storage_config_secret(
         admin_client=admin_client,
-        endpoint_secret_name=ci_endpoint_s3_secret.name,
-        namespace=ci_endpoint_s3_secret.namespace,
+        endpoint_secret_name=ci_model_mesh_endpoint_s3_secret.name,
+        namespace=ci_model_mesh_endpoint_s3_secret.namespace,
         aws_access_key=aws_access_key_id,
         aws_secret_access_key=aws_secret_access_key,
         aws_s3_bucket=ci_s3_bucket_name,
@@ -95,12 +96,14 @@ def storage_config_secret(
 
 
 @pytest.fixture(scope="class")
-def model_mesh_model_service_account(admin_client: DynamicClient, ci_endpoint_s3_secret: Secret) -> ServiceAccount:
+def model_mesh_model_service_account(
+    admin_client: DynamicClient, ci_model_mesh_endpoint_s3_secret: Secret
+) -> ServiceAccount:
     with ServiceAccount(
         client=admin_client,
-        namespace=ci_endpoint_s3_secret.namespace,
+        namespace=ci_model_mesh_endpoint_s3_secret.namespace,
         name=f"{Protocols.HTTP}-models-bucket-sa",
-        secrets=[{"name": ci_endpoint_s3_secret.name}],
+        secrets=[{"name": ci_model_mesh_endpoint_s3_secret.name}],
     ) as sa:
         yield sa
 
@@ -111,7 +114,7 @@ def http_s3_openvino_model_mesh_inference_service(
     admin_client: DynamicClient,
     ns_with_modelmesh_enabled: Namespace,
     http_s3_openvino_model_mesh_serving_runtime: ServingRuntime,
-    ci_endpoint_s3_secret: Secret,
+    ci_model_mesh_endpoint_s3_secret: Secret,
     storage_config_secret: Secret,
     model_mesh_model_service_account: ServiceAccount,
 ) -> InferenceService:
@@ -121,11 +124,11 @@ def http_s3_openvino_model_mesh_inference_service(
         "namespace": ns_with_modelmesh_enabled.name,
         "runtime": http_s3_openvino_model_mesh_serving_runtime.name,
         "model_service_account": model_mesh_model_service_account.name,
-        "storage_key": ci_endpoint_s3_secret.name,
+        "storage_key": ci_model_mesh_endpoint_s3_secret.name,
         "storage_path": request.param.get("model-path"),
         "model_format": ModelAndFormat.OPENVINO_IR,
         "deployment_mode": KServeDeploymentType.MODEL_MESH,
-        "model_version": "opset1",
+        "model_version": ModelVersion.OPSET1,
     }
 
     enable_auth = False
