@@ -8,6 +8,10 @@ from utilities.constants import ModelName, Protocols, ModelInferenceRuntime
 from utilities.inference_utils import Inference
 
 
+pytestmark = pytest.mark.usefixtures("skip_if_no_deployed_openshift_serverless")
+
+
+@pytest.mark.serverless
 @pytest.mark.parametrize(
     "model_namespace, serving_runtime_from_template, model_car_tgis_inference_service",
     [

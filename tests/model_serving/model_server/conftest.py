@@ -3,6 +3,7 @@ from typing import Any, Generator
 import pytest
 from _pytest.fixtures import FixtureRequest
 from kubernetes.dynamic import DynamicClient
+from ocp_resources.cluster_service_version import ClusterServiceVersion
 from ocp_resources.namespace import Namespace
 from ocp_resources.secret import Secret
 from ocp_resources.service_account import ServiceAccount
@@ -11,6 +12,24 @@ from ocp_resources.serving_runtime import ServingRuntime
 from utilities.constants import Protocols, ModelInferenceRuntime, RuntimeTemplates
 from utilities.infra import s3_endpoint_secret
 from utilities.serving_runtime import ServingRuntimeFromTemplate
+
+
+@pytest.fixture(scope="session")
+def skip_if_no_deployed_openshift_serverless(admin_client: DynamicClient):
+    csvs = list(
+        ClusterServiceVersion.get(
+            client=admin_client,
+            namespace="openshift-serverless",
+            label_selector="operators.coreos.com/serverless-operator.openshift-serverless",
+        )
+    )
+    if not csvs:
+        pytest.skip("OpenShift Serverless is not deployed")
+
+    csv = csvs[0]
+
+    if not (csv.exists and csv.status == csv.Status.SUCCEEDED):
+        pytest.skip("OpenShift Serverless is not deployed")
 
 
 @pytest.fixture(scope="class")

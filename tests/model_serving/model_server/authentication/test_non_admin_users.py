@@ -18,6 +18,8 @@ from utilities.inference_utils import Inference
 )
 class TestKserveUnprivilegedUser:
     @pytest.mark.smoke
+    @pytest.mark.serverless
+    @pytest.mark.usefixtures("skip_if_no_deployed_openshift_serverless")
     @pytest.mark.polarion("ODS-2552")
     def test_non_admin_deploy_and_query_model(self, unprivileged_s3_caikit_serverless_inference_service):
         """Verify non admin can deploy a model and query using REST"""

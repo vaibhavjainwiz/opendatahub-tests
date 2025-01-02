@@ -24,7 +24,7 @@ def verify_inference_response(
     text: Optional[str] = None,
     use_default_query: bool = False,
     expected_response_text: Optional[str] = None,
-    insecure: bool = True,
+    insecure: bool = False,
     token: Optional[str] = None,
     authorized_user: Optional[bool] = None,
 ) -> None:

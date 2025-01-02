@@ -14,6 +14,10 @@ from utilities.constants import (
 from utilities.inference_utils import Inference
 
 
+pytestmark = pytest.mark.usefixtures("skip_if_no_deployed_openshift_serverless", "valid_aws_config")
+
+
+@pytest.mark.serverless
 @pytest.mark.parametrize(
     "model_namespace, ci_s3_storage_uri, openvino_kserve_serving_runtime, ovms_serverless_inference_service",
     [

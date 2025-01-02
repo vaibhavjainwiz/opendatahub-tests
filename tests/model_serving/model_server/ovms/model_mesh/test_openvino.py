@@ -11,6 +11,7 @@ from utilities.constants import (
 from utilities.inference_utils import Inference
 
 
+@pytest.mark.model_mesh
 @pytest.mark.parametrize(
     "ns_with_modelmesh_enabled, http_s3_openvino_model_mesh_inference_service",
     [

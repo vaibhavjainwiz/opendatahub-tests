@@ -3,18 +3,23 @@ from __future__ import annotations
 import json
 import shlex
 from contextlib import contextmanager
+from functools import cache
 from typing import Dict, Generator, List, Optional
 
+import kubernetes
 from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import ResourceNotFoundError, ResourceNotUniqueError
+from ocp_resources.catalog_source import CatalogSource
 from ocp_resources.deployment import Deployment
 from ocp_resources.inference_service import InferenceService
+from ocp_resources.infrastructure import Infrastructure
 from ocp_resources.namespace import Namespace
 from ocp_resources.project_project_openshift_io import Project
 from ocp_resources.project_request import ProjectRequest
 from ocp_resources.role import Role
 from ocp_resources.secret import Secret
 from pyhelper_utils.shell import run_command
+from pytest_testconfig import config as py_config
 from simple_logger.logger import get_logger
 
 from tests.model_serving.model_server.utils import b64_encoded_string
@@ -183,6 +188,45 @@ def login_with_user_password(api_address: str, user: str, password: str | None =
     if password:
         login_command += f" -p '{password}'"
 
-    _, out, _ = run_command(command=shlex.split(login_command))
+    _, out, _ = run_command(command=shlex.split(login_command), hide_log_command=True)
 
     return "Login successful" in out
+
+
+@cache
+def is_self_managed_operator(client: DynamicClient) -> bool:
+    """
+    Check if the operator is self-managed.
+    """
+    if py_config["distribution"] == "upstream":
+        return True
+
+    if CatalogSource(
+        client=client,
+        name="addon-managed-odh-catalog",
+        namespace=py_config["applications_namespace"],
+    ).exists:
+        return False
+
+    return True
+
+
+@cache
+def is_managed_cluster(client: DynamicClient) -> bool:
+    """
+    Check if the cluster is managed.
+    """
+    infra = Infrastructure(client=client, name="cluster")
+
+    if not infra.exists:
+        LOGGER.warning(f"Infrastructure {infra.name} resource does not exist in the cluster")
+        return False
+
+    platform_statuses = infra.instance.status.platformStatus
+
+    for entries in platform_statuses.values():
+        if isinstance(entries, kubernetes.dynamic.resource.ResourceField):
+            if tags := entries.resourceTags:
+                return next(b["value"] == "true" for b in tags if b["key"] == "red-hat-managed")
+
+    return False

@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
 from ocp_resources.inference_service import InferenceService
+from ocp_resources.resource import get_client
 from ocp_resources.service import Service
 from pyhelper_utils.shell import run_command
 from simple_logger.logger import get_logger
@@ -15,6 +16,7 @@ from simple_logger.logger import get_logger
 from tests.model_serving.model_server.utils import (
     get_services_by_isvc_label,
 )
+from utilities.certificates_utils import get_ca_bundle
 from utilities.constants import (
     KServeDeploymentType,
     MODELMESH_SERVING,
@@ -181,6 +183,16 @@ class UserInference(Inference):
 
         if insecure:
             cmd += " --insecure"
+
+        else:
+            # admin client is needed to check if cluster is managed
+            _client = get_client()
+            if ca := get_ca_bundle(client=_client, deployment_mode=self.deployment_mode):
+                cmd += f" --cacert {ca} "
+
+            else:
+                LOGGER.error("No CA bundle found, using insecure aceess")
+                cmd += " --insecure"
 
         if cmd_args := self.runtime_config.get("args"):
             cmd += f" {cmd_args} "

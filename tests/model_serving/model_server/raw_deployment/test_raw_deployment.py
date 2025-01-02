@@ -14,6 +14,7 @@ from utilities.inference_utils import Inference
 pytestmark = pytest.mark.usefixtures("valid_aws_config")
 
 
+@pytest.mark.raw_deployment
 @pytest.mark.parametrize(
     "model_namespace, s3_models_storage_uri",
     [
