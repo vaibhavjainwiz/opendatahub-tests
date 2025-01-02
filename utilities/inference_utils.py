@@ -13,9 +13,7 @@ from ocp_resources.service import Service
 from pyhelper_utils.shell import run_command
 from simple_logger.logger import get_logger
 
-from tests.model_serving.model_server.utils import (
-    get_services_by_isvc_label,
-)
+from utilities.infra import get_services_by_isvc_label
 from utilities.certificates_utils import get_ca_bundle
 from utilities.constants import (
     KServeDeploymentType,
@@ -126,7 +124,15 @@ class UserInference(Inference):
             raise ValueError("Either pass `inference_input` or set `use_default_query` to True")
 
         if use_default_query:
-            inference_input = self.inference_config.get("default_query_model", {}).get("query_input")
+            default_query_config = self.inference_config.get("default_query_model")
+            if not default_query_config:
+                raise ValueError(f"Missing default query config for {model_name}")
+
+            if self.inference_config.get("support_multi_default_queries"):
+                inference_input = default_query_config.get(self.inference_type).get("query_input")
+            else:
+                inference_input = default_query_config.get("query_input")
+
             if not inference_input:
                 raise ValueError(f"Missing default query dict for {model_name}")
 

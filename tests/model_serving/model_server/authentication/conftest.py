@@ -16,8 +16,8 @@ from ocp_resources.serving_runtime import ServingRuntime
 from pyhelper_utils.shell import run_command
 from pytest_testconfig import config as py_config
 
-from utilities.infra import create_isvc_view_role, create_ns, s3_endpoint_secret
-from tests.model_serving.model_server.utils import create_isvc, get_pods_by_isvc_label
+from utilities.infra import create_isvc_view_role, create_ns, get_pods_by_isvc_label, s3_endpoint_secret
+from tests.model_serving.model_server.utils import create_isvc
 from utilities.constants import (
     KServeDeploymentType,
     ModelFormat,
@@ -199,7 +199,7 @@ def http_s3_caikit_serverless_inference_service(
     request: FixtureRequest,
     admin_client: DynamicClient,
     model_namespace: Namespace,
-    http_s3_caikit_serving_runtime: ServingRuntime,
+    http_s3_caikit_tgis_serving_runtime: ServingRuntime,
     s3_models_storage_uri: str,
     http_model_service_account: ServiceAccount,
 ) -> InferenceService:
@@ -207,9 +207,9 @@ def http_s3_caikit_serverless_inference_service(
         client=admin_client,
         name=f"{Protocols.HTTP}-{ModelFormat.CAIKIT}",
         namespace=model_namespace.name,
-        runtime=http_s3_caikit_serving_runtime.name,
+        runtime=http_s3_caikit_tgis_serving_runtime.name,
         storage_uri=s3_models_storage_uri,
-        model_format=http_s3_caikit_serving_runtime.instance.spec.supportedModelFormats[0].name,
+        model_format=http_s3_caikit_tgis_serving_runtime.instance.spec.supportedModelFormats[0].name,
         deployment_mode=KServeDeploymentType.SERVERLESS,
         model_service_account=http_model_service_account.name,
         enable_auth=True,

@@ -1,8 +1,6 @@
 import pytest
 
-from tests.model_serving.model_server.authentication.utils import (
-    verify_inference_response,
-)
+from tests.model_serving.model_server.utils import verify_inference_response
 from utilities.constants import (
     ModelAndFormat,
     ModelFormat,
@@ -33,7 +31,7 @@ pytestmark = pytest.mark.usefixtures("skip_if_no_deployed_openshift_serverless",
     ],
     indirect=True,
 )
-class TestOpenVINO:
+class TestOpenVINOServerless:
     @pytest.mark.smoke
     @pytest.mark.polarion("ODS-2626")
     def test_serverless_openvino_rest_inference(self, ovms_serverless_inference_service):
