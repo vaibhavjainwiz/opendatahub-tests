@@ -65,8 +65,8 @@ def create_ns(
 
 
 def wait_for_inference_deployment_replicas(
-    client: DynamicClient, isvc: InferenceService, deployment_mode: str
-) -> Deployment:
+    client: DynamicClient, isvc: InferenceService, deployment_mode: str, expected_num_deployments: int = 1
+) -> List[Deployment]:
     ns = isvc.namespace
 
     if deployment_mode in (
@@ -86,13 +86,14 @@ def wait_for_inference_deployment_replicas(
         )
     )
 
-    if len(deployments) == 1:
-        deployment = deployments[0]
-        if deployment.exists:
-            deployment.wait_for_replicas()
-            return deployment
+    if len(deployments) == expected_num_deployments:
+        for deployment in deployments:
+            if deployment.exists:
+                deployment.wait_for_replicas()
 
-    elif len(deployments) > 1:
+        return deployments
+
+    elif len(deployments) > expected_num_deployments:
         raise ResourceNotUniqueError(f"Multiple predictor deployments found in namespace {ns}")
 
     else:
