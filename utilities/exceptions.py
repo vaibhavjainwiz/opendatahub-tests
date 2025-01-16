@@ -3,7 +3,7 @@ from typing import Optional
 from ocp_resources.service import Service
 
 
-class ProtocolNotSupported(Exception):
+class ProtocolNotSupportedError(Exception):
     def __init__(self, protocol: str):
         self.protocol = protocol
 
@@ -11,7 +11,7 @@ class ProtocolNotSupported(Exception):
         return f"Protocol {self.protocol} is not supported"
 
 
-class TooManyServices(Exception):
+class TooManyServicesError(Exception):
     def __init__(self, services: list[Service]):
         self.services = services
 
@@ -23,24 +23,24 @@ class InferenceResponseError(Exception):
     pass
 
 
-class InvalidStorageArgument(Exception):
+class InvalidStorageArgumentError(Exception):
     def __init__(
         self,
-        storageUri: Optional[str],
+        storage_uri: Optional[str],
         storage_key: Optional[str],
         storage_path: Optional[str],
     ):
-        self.storageUri = storageUri
+        self.storage_uri = storage_uri
         self.storage_key = storage_key
         self.storage_path = storage_path
 
     def __str__(self) -> str:
         msg = f"""
             You've passed the following parameters:
-            "storageUri": {self.storageUri}
+            "storage_uri": {self.storage_uri}
             "storage_key": {self.storage_key}
             "storage_path: {self.storage_path}
-            In order to create a valid ISVC you need to specify either a storageUri value
+            In order to create a valid ISVC you need to specify either a storage_uri value
             or both a storage key and a storage path.
         """
         return msg
@@ -48,3 +48,11 @@ class InvalidStorageArgument(Exception):
 
 class MetricValidationError(Exception):
     pass
+
+
+class FailedPodsError(Exception):
+    def __init__(self, pods: dict[str, str]):
+        self.pods = pods
+
+    def __str__(self) -> str:
+        return f"The following pods are not running: {self.pods}"

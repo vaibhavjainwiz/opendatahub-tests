@@ -9,7 +9,7 @@ from ocp_resources.inference_service import InferenceService
 from simple_logger.logger import get_logger
 
 from utilities.constants import Protocols
-from utilities.exceptions import ProtocolNotSupported
+from utilities.exceptions import ProtocolNotSupportedError
 
 LOGGER = get_logger(name=__name__)
 
@@ -21,7 +21,7 @@ def curl_from_pod(
     protocol: str = Protocols.HTTP,
 ) -> str:
     if protocol not in (Protocols.HTTPS, Protocols.HTTP):
-        raise ProtocolNotSupported(protocol)
+        raise ProtocolNotSupportedError(protocol)
     host = isvc.instance.status.address.url
     if protocol == "http":
         parsed = urlparse(host)

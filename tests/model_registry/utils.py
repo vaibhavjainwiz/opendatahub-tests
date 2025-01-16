@@ -4,7 +4,7 @@ from ocp_resources.service import Service
 from ocp_resources.model_registry import ModelRegistry
 from kubernetes.dynamic.exceptions import ResourceNotFoundError
 
-from utilities.exceptions import ProtocolNotSupported, TooManyServices
+from utilities.exceptions import ProtocolNotSupportedError, TooManyServicesError
 from utilities.constants import Protocols, HTTPRequest
 from tests.model_registry.constants import ModelRegistryEndpoints
 
@@ -35,7 +35,7 @@ def get_mr_service_by_label(client: DynamicClient, ns: Namespace, mr_instance: M
     ]:
         if len(svc) == 1:
             return svc[0]
-        raise TooManyServices(svc)
+        raise TooManyServicesError(svc)
     raise ResourceNotFoundError(f"{mr_instance.name} has no Service")
 
 
@@ -43,7 +43,7 @@ def get_endpoint_from_mr_service(client: DynamicClient, svc: Service, protocol: 
     if protocol in (Protocols.REST, Protocols.GRPC):
         return svc.instance.metadata.annotations[f"{ADDRESS_ANNOTATION_PREFIX}{protocol}"]
     else:
-        raise ProtocolNotSupported(protocol)
+        raise ProtocolNotSupportedError(protocol)
 
 
 def generate_register_model_command(endpoint: str, token: str) -> str:
