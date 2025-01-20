@@ -1,5 +1,4 @@
 import shlex
-from typing import Generator
 
 import pytest
 from _pytest.fixtures import FixtureRequest
@@ -24,7 +23,7 @@ from utilities.constants import (
     ModelInferenceRuntime,
     RuntimeTemplates,
 )
-from utilities.infra import create_isvc_view_role, create_storage_config_secret, s3_endpoint_secret
+from utilities.infra import create_isvc_view_role, s3_endpoint_secret
 from utilities.serving_runtime import ServingRuntimeFromTemplate
 
 
@@ -73,29 +72,6 @@ def ci_model_mesh_endpoint_s3_secret(
 
 
 @pytest.fixture(scope="class")
-def model_mesh_storage_config_secret(
-    admin_client: DynamicClient,
-    ci_model_mesh_endpoint_s3_secret: Secret,
-    aws_access_key_id: str,
-    aws_secret_access_key: str,
-    ci_s3_bucket_name: str,
-    ci_s3_bucket_region: str,
-    ci_s3_bucket_endpoint: str,
-) -> Generator[Secret, None, None]:
-    with create_storage_config_secret(
-        admin_client=admin_client,
-        endpoint_secret_name=ci_model_mesh_endpoint_s3_secret.name,
-        namespace=ci_model_mesh_endpoint_s3_secret.namespace,
-        aws_access_key=aws_access_key_id,
-        aws_secret_access_key=aws_secret_access_key,
-        aws_s3_bucket=ci_s3_bucket_name,
-        aws_s3_region=ci_s3_bucket_region,
-        aws_s3_endpoint=ci_s3_bucket_endpoint,
-    ) as storage_config:
-        yield storage_config
-
-
-@pytest.fixture(scope="class")
 def model_mesh_model_service_account(
     admin_client: DynamicClient, ci_model_mesh_endpoint_s3_secret: Secret
 ) -> ServiceAccount:
@@ -115,7 +91,6 @@ def http_s3_openvino_model_mesh_inference_service(
     ns_with_modelmesh_enabled: Namespace,
     http_s3_openvino_model_mesh_serving_runtime: ServingRuntime,
     ci_model_mesh_endpoint_s3_secret: Secret,
-    model_mesh_storage_config_secret: Secret,
     model_mesh_model_service_account: ServiceAccount,
 ) -> InferenceService:
     isvc_kwargs = {

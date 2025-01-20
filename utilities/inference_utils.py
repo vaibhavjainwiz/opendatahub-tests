@@ -17,7 +17,6 @@ from utilities.infra import get_pods_by_isvc_label, get_services_by_isvc_label
 from utilities.certificates_utils import get_ca_bundle
 from utilities.constants import (
     KServeDeploymentType,
-    MODELMESH_SERVING,
     ModelInferenceRuntime,
     Protocols,
     HTTPRequest,
@@ -235,7 +234,7 @@ class UserInference(Inference):
 
         # For internal inference, we need to use port forwarding to the service
         if not self.visibility_exposed:
-            svc = self.get_isvc_service()
+            svc = get_services_by_isvc_label(client=self.inference_service.client, isvc=self.inference_service)[0]
             port = self.get_target_port(svc=svc)
             cmd = cmd.replace("localhost", f"localhost:{port}")
 
@@ -280,23 +279,6 @@ class UserInference(Inference):
 
         except JSONDecodeError:
             return {"output": out}
-
-    def get_isvc_service(self) -> Service:
-        if self.deployment_mode == KServeDeploymentType.MODEL_MESH:
-            if svc := list(
-                Service.get(
-                    dyn_client=self.inference_service.client,
-                    name=MODELMESH_SERVING,
-                    namespace=self.inference_service.namespace,
-                )
-            ):
-                svc = svc[0]
-            else:
-                raise ValueError(f"Service {MODELMESH_SERVING} not found")
-
-        else:
-            svc = get_services_by_isvc_label(client=self.inference_service.client, isvc=self.inference_service)[0]
-        return svc
 
     def get_target_port(self, svc: Service) -> int:
         if self.protocol in Protocols.ALL_SUPPORTED_PROTOCOLS:

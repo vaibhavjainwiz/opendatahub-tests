@@ -12,7 +12,7 @@ from kubernetes.dynamic import DynamicClient
 
 from tests.model_registry.utils import get_endpoint_from_mr_service, get_mr_service_by_label
 from utilities.infra import create_ns
-from utilities.constants import Protocols, KubernetesAnnotations
+from utilities.constants import Annotations, Protocols
 
 
 LOGGER = get_logger(name=__name__)
@@ -22,9 +22,9 @@ MR_INSTANCE_NAME: str = "model-registry"
 MR_OPERATOR_NAME: str = "model-registry-operator"
 MR_NAMESPACE: str = "rhoai-model-registries"
 DEFAULT_LABEL_DICT_DB: dict[str, str] = {
-    KubernetesAnnotations.NAME: DB_RESOURCES_NAME,
-    KubernetesAnnotations.INSTANCE: DB_RESOURCES_NAME,
-    KubernetesAnnotations.PART_OF: DB_RESOURCES_NAME,
+    Annotations.KubernetesIo.NAME: DB_RESOURCES_NAME,
+    Annotations.KubernetesIo.INSTANCE: DB_RESOURCES_NAME,
+    Annotations.KubernetesIo.PART_OF: DB_RESOURCES_NAME,
 }
 
 
@@ -251,10 +251,10 @@ def model_registry_instance(
         name=MR_INSTANCE_NAME,
         namespace=model_registry_namespace.name,
         label={
-            KubernetesAnnotations.NAME: MR_INSTANCE_NAME,
-            KubernetesAnnotations.INSTANCE: MR_INSTANCE_NAME,
-            KubernetesAnnotations.PART_OF: MR_OPERATOR_NAME,
-            KubernetesAnnotations.CREATED_BY: MR_OPERATOR_NAME,
+            Annotations.KubernetesIo.NAME: MR_INSTANCE_NAME,
+            Annotations.KubernetesIo.INSTANCE: MR_INSTANCE_NAME,
+            Annotations.KubernetesIo.PART_OF: MR_OPERATOR_NAME,
+            Annotations.KubernetesIo.CREATED_BY: MR_OPERATOR_NAME,
         },
         grpc={},
         rest={},

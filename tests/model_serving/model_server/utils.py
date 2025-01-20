@@ -9,7 +9,7 @@ from ocp_resources.inference_service import InferenceService
 from simple_logger.logger import get_logger
 from timeout_sampler import TimeoutSampler
 
-from utilities.constants import KServeDeploymentType
+from utilities.constants import Annotations, KServeDeploymentType
 from utilities.exceptions import FailedPodsError, InferenceResponseError, InvalidStorageArgumentError
 from utilities.inference_utils import UserInference
 from utilities.infra import (
@@ -110,7 +110,7 @@ def create_isvc(
     if volumes:
         predictor_dict["volumes"] = volumes
 
-    annotations = {"serving.kserve.io/deploymentMode": deployment_mode}
+    annotations = {Annotations.KserveIo.DEPLOYMENT_MODE: deployment_mode}
 
     if deployment_mode == KServeDeploymentType.SERVERLESS:
         annotations.update({

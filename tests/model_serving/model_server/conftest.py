@@ -96,28 +96,22 @@ def serving_runtime_from_template(
 
 
 @pytest.fixture(scope="class")
-def ci_s3_storage_uri(request: FixtureRequest, ci_s3_bucket_name: str) -> str:
-    return f"s3://{ci_s3_bucket_name}/{request.param['model-dir']}/"
-
-
-@pytest.fixture(scope="class")
 def s3_models_inference_service(
     request: FixtureRequest,
     admin_client: DynamicClient,
     model_namespace: Namespace,
     serving_runtime_from_template: ServingRuntime,
-    s3_models_storage_uri: str,
-    model_service_account: ServiceAccount,
+    models_endpoint_s3_secret: Secret,
 ) -> InferenceService:
     isvc_kwargs = {
         "client": admin_client,
         "name": request.param["name"],
         "namespace": model_namespace.name,
         "runtime": serving_runtime_from_template.name,
-        "storage_uri": s3_models_storage_uri,
         "model_format": serving_runtime_from_template.instance.spec.supportedModelFormats[0].name,
-        "model_service_account": model_service_account.name,
         "deployment_mode": request.param["deployment-mode"],
+        "storage_key": models_endpoint_s3_secret.name,
+        "storage_path": request.param["model-dir"],
     }
 
     if (external_route := request.param.get("external-route")) is not None:

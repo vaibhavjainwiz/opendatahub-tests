@@ -1,5 +1,6 @@
 import shlex
 from typing import Any, Generator
+from urllib.parse import urlparse
 
 import pytest
 from _pytest.fixtures import FixtureRequest
@@ -74,17 +75,17 @@ def grpc_s3_inference_service(
     model_namespace: Namespace,
     grpc_s3_caikit_serving_runtime: ServingRuntime,
     s3_models_storage_uri: str,
-    grpc_model_service_account: ServiceAccount,
+    models_endpoint_s3_secret: Secret,
 ) -> InferenceService:
     with create_isvc(
         client=admin_client,
         name=f"{Protocols.GRPC}-{ModelFormat.CAIKIT}",
         namespace=model_namespace.name,
         runtime=grpc_s3_caikit_serving_runtime.name,
-        storage_uri=s3_models_storage_uri,
         model_format=grpc_s3_caikit_serving_runtime.instance.spec.supportedModelFormats[0].name,
+        storage_key=models_endpoint_s3_secret.name,
+        storage_path=urlparse(s3_models_storage_uri).path,
         deployment_mode=KServeDeploymentType.SERVERLESS,
-        model_service_account=grpc_model_service_account.name,
         enable_auth=True,
     ) as isvc:
         yield isvc
@@ -199,18 +200,18 @@ def http_s3_caikit_serverless_inference_service(
     model_namespace: Namespace,
     http_s3_caikit_tgis_serving_runtime: ServingRuntime,
     s3_models_storage_uri: str,
-    model_service_account: ServiceAccount,
+    models_endpoint_s3_secret: Secret,
 ) -> InferenceService:
     with create_isvc(
         client=admin_client,
         name=f"{Protocols.HTTP}-{ModelFormat.CAIKIT}",
         namespace=model_namespace.name,
         runtime=http_s3_caikit_tgis_serving_runtime.name,
-        storage_uri=s3_models_storage_uri,
         model_format=http_s3_caikit_tgis_serving_runtime.instance.spec.supportedModelFormats[0].name,
         deployment_mode=KServeDeploymentType.SERVERLESS,
-        model_service_account=model_service_account.name,
         enable_auth=True,
+        storage_key=models_endpoint_s3_secret.name,
+        storage_path=urlparse(s3_models_storage_uri).path,
     ) as isvc:
         yield isvc
 
@@ -267,36 +268,22 @@ def unprivileged_models_endpoint_s3_secret(
 
 
 @pytest.fixture(scope="class")
-def unprivileged_model_service_account(
-    unprivileged_client: DynamicClient, unprivileged_models_endpoint_s3_secret: Secret
-) -> ServiceAccount:
-    with ServiceAccount(
-        client=unprivileged_client,
-        namespace=unprivileged_models_endpoint_s3_secret.namespace,
-        name=f"{Protocols.HTTP}-models-bucket-sa",
-        secrets=[{"name": unprivileged_models_endpoint_s3_secret.name}],
-    ) as sa:
-        yield sa
-
-
-@pytest.fixture(scope="class")
 def unprivileged_s3_caikit_serverless_inference_service(
     request: FixtureRequest,
     unprivileged_client: DynamicClient,
     unprivileged_model_namespace: Namespace,
     unprivileged_s3_caikit_serving_runtime: ServingRuntime,
-    s3_models_storage_uri: str,
-    unprivileged_model_service_account: ServiceAccount,
+    unprivileged_models_endpoint_s3_secret: Secret,
 ) -> InferenceService:
     with create_isvc(
         client=unprivileged_client,
         name=f"{Protocols.HTTP}-{ModelFormat.CAIKIT}",
         namespace=unprivileged_model_namespace.name,
         runtime=unprivileged_s3_caikit_serving_runtime.name,
-        storage_uri=s3_models_storage_uri,
         model_format=unprivileged_s3_caikit_serving_runtime.instance.spec.supportedModelFormats[0].name,
         deployment_mode=KServeDeploymentType.SERVERLESS,
-        model_service_account=unprivileged_model_service_account.name,
+        storage_key=unprivileged_models_endpoint_s3_secret.name,
+        storage_path=request.param["model-dir"],
     ) as isvc:
         yield isvc
 

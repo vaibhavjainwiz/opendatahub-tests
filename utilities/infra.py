@@ -10,6 +10,7 @@ import kubernetes
 from kubernetes.dynamic import DynamicClient
 from kubernetes.dynamic.exceptions import ResourceNotFoundError, ResourceNotUniqueError
 from ocp_resources.catalog_source import CatalogSource
+from ocp_resources.config_map import ConfigMap
 from ocp_resources.deployment import Deployment
 from ocp_resources.inference_service import InferenceService
 from ocp_resources.infrastructure import Infrastructure
@@ -24,9 +25,8 @@ from pyhelper_utils.shell import run_command
 from pytest_testconfig import config as py_config
 from simple_logger.logger import get_logger
 
-from utilities.constants import KServeDeploymentType, MODELMESH_SERVING
-from utilities.general import b64_encoded_string, get_s3_secret_dict
-
+import utilities.general
+from utilities.general import create_isvc_label_selector_str
 
 LOGGER = get_logger(name=__name__)
 TIMEOUT_2MIN = 2 * 60
@@ -68,15 +68,7 @@ def wait_for_inference_deployment_replicas(
     client: DynamicClient, isvc: InferenceService, deployment_mode: str, expected_num_deployments: int = 1
 ) -> List[Deployment]:
     ns = isvc.namespace
-
-    if deployment_mode in (
-        KServeDeploymentType.SERVERLESS,
-        KServeDeploymentType.RAW_DEPLOYMENT,
-    ):
-        label_selector = f"{isvc.ApiGroup.SERVING_KSERVE_IO}/inferenceservice={isvc.name}"
-
-    else:
-        label_selector = f"modelmesh-service={MODELMESH_SERVING}"
+    label_selector = create_isvc_label_selector_str(isvc=isvc)
 
     deployments = list(
         Deployment.get(
@@ -116,7 +108,9 @@ def s3_endpoint_secret(
         name=name,
         namespace=namespace,
         annotations={"opendatahub.io/connection-type": "s3"},
-        data_dict=get_s3_secret_dict(
+        # the labels are needed to set the secret as data connection by odh-model-controller
+        label={"opendatahub.io/managed": "true", "opendatahub.io/dashboard": "true"},
+        data_dict=utilities.general.get_s3_secret_dict(
             aws_access_key=aws_access_key,
             aws_secret_access_key=aws_secret_access_key,
             aws_s3_bucket=aws_s3_bucket,
@@ -126,37 +120,6 @@ def s3_endpoint_secret(
         wait_for_resource=True,
     ) as secret:
         yield secret
-
-
-@contextmanager
-def create_storage_config_secret(
-    admin_client: DynamicClient,
-    endpoint_secret_name: str,
-    namespace: str,
-    aws_access_key: str,
-    aws_secret_access_key: str,
-    aws_s3_bucket: str,
-    aws_s3_region: str,
-    aws_s3_endpoint: str,
-) -> Generator[Secret, None, None]:
-    secret = {
-        "access_key_id": aws_access_key,
-        "bucket": aws_s3_bucket,
-        "default_bucket": aws_s3_bucket,
-        "endpoint_url": aws_s3_endpoint,
-        "region": aws_s3_region,
-        "secret_access_key": aws_secret_access_key,
-        "type": "s3",
-    }
-    data = {endpoint_secret_name: b64_encoded_string(string_to_encode=json.dumps(secret))}
-    with Secret(
-        client=admin_client,
-        namespace=namespace,
-        data_dict=data,
-        wait_for_resource=True,
-        name="storage-config",
-    ) as storage_config:
-        yield storage_config
 
 
 @contextmanager
@@ -258,12 +221,14 @@ def get_services_by_isvc_label(client: DynamicClient, isvc: InferenceService) ->
     Raises:
         ResourceNotFoundError: if no pods are found.
     """
+    label_selector = create_isvc_label_selector_str(isvc=isvc)
+
     if svcs := [
         svc
         for svc in Service.get(
             dyn_client=client,
             namespace=isvc.namespace,
-            label_selector=f"{isvc.ApiGroup.SERVING_KSERVE_IO}/inferenceservice={isvc.name}",
+            label_selector=label_selector,
         )
     ]:
         return svcs
@@ -283,12 +248,13 @@ def get_pods_by_isvc_label(client: DynamicClient, isvc: InferenceService) -> Lis
     Raises:
         ResourceNotFoundError: if no pods are found.
     """
+    label_selector = create_isvc_label_selector_str(isvc=isvc)
     if pods := [
         pod
         for pod in Pod.get(
             dyn_client=client,
             namespace=isvc.namespace,
-            label_selector=f"{isvc.ApiGroup.SERVING_KSERVE_IO}/inferenceservice={isvc.name}",
+            label_selector=label_selector,
         )
     ]:
         return pods
@@ -298,3 +264,12 @@ def get_pods_by_isvc_label(client: DynamicClient, isvc: InferenceService) -> Lis
 
 def get_openshift_token() -> str:
     return run_command(command=shlex.split("oc whoami -t"))[1].strip()
+
+
+def get_kserve_storage_initialize_image(client: DynamicClient) -> str:
+    kserve_cm = ConfigMap(client=client, name="inferenceservice-config", namespace=py_config["applications_namespace"])
+
+    if not kserve_cm.exists:
+        raise ResourceNotFoundError(f"{kserve_cm.name} config map does not exist")
+
+    return json.loads(kserve_cm.instance.data.storageInitializer)["image"]

@@ -107,11 +107,15 @@ class AcceleratorType:
     SUPPORTED_LISTS: list[str] = [NVIDIA, AMD, GAUDI]
 
 
-class KubernetesAnnotations:
-    NAME: str = f"{Resource.ApiGroup.APP_KUBERNETES_IO}/name"
-    INSTANCE: str = f"{Resource.ApiGroup.APP_KUBERNETES_IO}/instance"
-    PART_OF: str = f"{Resource.ApiGroup.APP_KUBERNETES_IO}/part-of"
-    CREATED_BY: str = f"{Resource.ApiGroup.APP_KUBERNETES_IO}/created-by"
+class Annotations:
+    class KubernetesIo:
+        NAME: str = f"{Resource.ApiGroup.APP_KUBERNETES_IO}/name"
+        INSTANCE: str = f"{Resource.ApiGroup.APP_KUBERNETES_IO}/instance"
+        PART_OF: str = f"{Resource.ApiGroup.APP_KUBERNETES_IO}/part-of"
+        CREATED_BY: str = f"{Resource.ApiGroup.APP_KUBERNETES_IO}/created-by"
+
+    class KserveIo:
+        DEPLOYMENT_MODE: str = "serving.kserve.io/deploymentMode"
 
 
 class StorageClassName:
