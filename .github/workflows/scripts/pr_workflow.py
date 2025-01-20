@@ -84,7 +84,7 @@ def set_pr_size(pr: PullRequest) -> None:
 
         if label.name.lower().startswith("size/"):
             LOGGER.info(f"Removing label {label.name}")
-            pr.remove_from_labels(label.name)
+            pr.remove_from_labels(label=label.name)
 
     LOGGER.info(f"New label: {size_label}")
     pr.add_to_labels(size_label)
@@ -108,7 +108,7 @@ def add_remove_pr_labels(pr: PullRequest, event_name: str, event_action: str, co
         for label in pr_labels:
             if label.lower() in (LGTM_STR, VERIFIED_STR):
                 LOGGER.info(f"Removing label {label}")
-                pr.remove_from_labels(label)
+                pr.remove_from_labels(label=label)
         return
 
     elif event_name == "issue_comment":
@@ -133,7 +133,7 @@ def add_remove_pr_labels(pr: PullRequest, event_name: str, event_action: str, co
             if action[CANCEL_ACTION] or event_action == "deleted":
                 if label_in_pr:
                     LOGGER.info(f"Removing label {label}")
-                    pr.remove_from_labels(label)
+                    pr.remove_from_labels(label=label)
             elif not label_in_pr:
                 LOGGER.info(f"Adding label {label}")
                 pr.add_to_labels(label)

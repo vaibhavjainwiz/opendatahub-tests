@@ -24,7 +24,7 @@ def curl_from_pod(
         raise ProtocolNotSupportedError(protocol)
     host = isvc.instance.status.address.url
     if protocol == "http":
-        parsed = urlparse(host)
+        parsed = urlparse(url=host)
         host = parsed._replace(scheme="http").geturl()
     return pod.execute(command=shlex.split(f"curl -k {host}/{endpoint}"), ignore_rc=True)
 

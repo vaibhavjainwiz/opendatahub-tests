@@ -49,7 +49,7 @@ def create_ns(
                 teardown=teardown,
                 delete_timeout=delete_timeout,
             )
-            project.wait_for_status(project.Status.ACTIVE, timeout=TIMEOUT_2MIN)
+            project.wait_for_status(status=project.Status.ACTIVE, timeout=TIMEOUT_2MIN)
             yield project
 
     else:

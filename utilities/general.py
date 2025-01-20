@@ -69,7 +69,7 @@ def download_model_data(
     containers = [
         {
             "name": "model-downloader",
-            "image": "quay.io/modh/kserve-storage-initializer@sha256:330af2d517b17dbf0cab31beba13cdbe7d6f4b9457114dea8f8485a011e3b138",
+            "image": "quay.io/modh/kserve-storage-initializer@sha256:330af2d517b17dbf0cab31beba13cdbe7d6f4b9457114dea8f8485a011e3b138",  # noqa: E501
             "args": [
                 f"s3://{bucket_name}/{model_path}/",
                 pvc_model_path,

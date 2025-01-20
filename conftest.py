@@ -12,8 +12,8 @@ from pytest_testconfig import config as py_config
 from utilities.logger import separator, setup_logging
 
 
-LOGGER = logging.getLogger(__name__)
-BASIC_LOGGER = logging.getLogger("basic")
+LOGGER = logging.getLogger(name=__name__)
+BASIC_LOGGER = logging.getLogger(name="basic")
 
 
 def pytest_addoption(parser: Parser) -> None:

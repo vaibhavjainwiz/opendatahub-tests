@@ -21,7 +21,7 @@ class TestModelRegistryCreation:
             endpoint=model_registry_instance_rest_endpoint, token=current_client_token
         )
         _, out, _ = run_command(command=shlex.split(cmd))
-        out_dict = literal_eval(out)
+        out_dict = literal_eval(node_or_string=out)
         errors = []
         if not out_dict["name"] == "model-name":
             errors.append(f"Unexpected name, received {out_dict['name']}")

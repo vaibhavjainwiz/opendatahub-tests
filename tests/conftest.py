@@ -33,12 +33,12 @@ def admin_client() -> DynamicClient:
 @pytest.fixture(scope="session", autouse=True)
 def tests_tmp_dir(request: FixtureRequest, tmp_path_factory: TempPathFactory) -> None:
     base_path = os.path.join(request.config.option.basetemp, "tests")
-    tests_tmp_path = tmp_path_factory.mktemp(base_path)
+    tests_tmp_path = tmp_path_factory.mktemp(basename=base_path)
     py_config["tmp_base_dir"] = str(tests_tmp_path)
 
     yield
 
-    shutil.rmtree(str(tests_tmp_path), ignore_errors=True)
+    shutil.rmtree(path=str(tests_tmp_path), ignore_errors=True)
 
 
 @pytest.fixture(scope="session")

@@ -68,7 +68,7 @@ def model_registry_db_service(
         },
         label=DEFAULT_LABEL_DICT_DB,
         annotations={
-            "template.openshift.io/expose-uri": "mysql://{.spec.clusterIP}:{.spec.ports[?(.name==\mysql\)].port}",
+            "template.openshift.io/expose-uri": r"mysql://{.spec.clusterIP}:{.spec.ports[?(.name==\mysql\)].port}",
         },
     ) as mr_db_service:
         yield mr_db_service
