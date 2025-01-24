@@ -12,8 +12,10 @@ from ocp_resources.secret import Secret
 from pyhelper_utils.shell import run_command
 from pytest import FixtureRequest, Config
 from kubernetes.dynamic import DynamicClient
+from kubernetes.dynamic.exceptions import ResourceNotFoundError
+from ocp_resources.data_science_cluster import DataScienceCluster
 from ocp_resources.namespace import Namespace
-from ocp_resources.resource import get_client
+from ocp_resources.resource import get_client, ResourceEditor
 from pytest_testconfig import config as py_config
 from simple_logger.logger import get_logger
 
@@ -238,3 +240,39 @@ def unprivileged_client(
 
         else:
             yield admin_client
+
+
+@pytest.fixture(scope="session")
+def dsc_resource(admin_client: DynamicClient):
+    name = py_config["dsc_name"]
+    for dsc in DataScienceCluster.get(dyn_client=admin_client, name=name):
+        return dsc
+    raise ResourceNotFoundError(f"DSC resource {name} not found")
+
+
+@pytest.fixture(scope="module")
+def updated_dsc_component_state(
+    request: FixtureRequest,
+    dsc_resource: DataScienceCluster,
+) -> Generator[DataScienceCluster, Any, Any]:
+    component_name = request.param["component_name"]
+    desired_state = request.param["desired_state"]
+    # Condition type for component being succesfully reconciled by DSC
+    condition_type = request.param["condition_type"]
+    if dsc_resource.instance.spec.components[component_name].managementState != desired_state:
+        with ResourceEditor(
+            patches={
+                dsc_resource: {
+                    "spec": {
+                        "components": {
+                            f"{component_name}": {"managementState": f"{desired_state}"},
+                        }
+                    }
+                }
+            }
+        ):
+            dsc_resource.wait_for_condition(condition=condition_type, status="True")
+            yield dsc_resource
+    else:
+        LOGGER.warning(f"Component {component_name} was already set to managementState {desired_state}")
+        yield dsc_resource
