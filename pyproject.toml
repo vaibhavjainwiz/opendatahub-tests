@@ -42,6 +42,7 @@ classifiers = [
 
 dependencies = [
     "ipython>=8.18.1",
+    "model-registry>=0.2.13",
     "openshift-python-utilities>=5.0.71",
     "pytest-dependency>=0.6.0",
     "pytest-progress",
