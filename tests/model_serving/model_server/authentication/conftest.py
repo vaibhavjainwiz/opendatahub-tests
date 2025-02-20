@@ -209,6 +209,19 @@ def patched_remove_raw_authentication_isvc(
 
 
 @pytest.fixture(scope="class")
+def model_service_account_2(
+    admin_client: DynamicClient, models_endpoint_s3_secret: Secret
+) -> Generator[ServiceAccount, Any, Any]:
+    with ServiceAccount(
+        client=admin_client,
+        namespace=models_endpoint_s3_secret.namespace,
+        name="models-bucket-sa-2",
+        secrets=[{"name": models_endpoint_s3_secret.name}],
+    ) as sa:
+        yield sa
+
+
+@pytest.fixture(scope="class")
 def grpc_view_role(
     admin_client: DynamicClient, grpc_s3_inference_service: InferenceService
 ) -> Generator[Role, Any, Any]:
@@ -292,6 +305,30 @@ def http_s3_caikit_raw_inference_service(
         model_format=http_s3_caikit_tgis_serving_runtime.instance.spec.supportedModelFormats[0].name,
         deployment_mode=KServeDeploymentType.RAW_DEPLOYMENT,
         model_service_account=model_service_account.name,
+        enable_auth=True,
+        external_route=True,
+    ) as isvc:
+        yield isvc
+
+
+@pytest.fixture(scope="class")
+def http_s3_caikit_raw_inference_service_2(
+    request: FixtureRequest,
+    admin_client: DynamicClient,
+    model_namespace: Namespace,
+    http_s3_caikit_tgis_serving_runtime: ServingRuntime,
+    s3_models_storage_uri: str,
+    model_service_account_2: ServiceAccount,
+) -> InferenceService:
+    with create_isvc(
+        client=admin_client,
+        name=f"{Protocols.HTTP}-{ModelFormat.CAIKIT}-2",
+        namespace=model_namespace.name,
+        runtime=http_s3_caikit_tgis_serving_runtime.name,
+        storage_uri=s3_models_storage_uri,
+        model_format=http_s3_caikit_tgis_serving_runtime.instance.spec.supportedModelFormats[0].name,
+        deployment_mode=KServeDeploymentType.RAW_DEPLOYMENT,
+        model_service_account=model_service_account_2.name,
         enable_auth=True,
         external_route=True,
     ) as isvc:
