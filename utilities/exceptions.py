@@ -80,3 +80,7 @@ class InferenceCanaryTrafficError(Exception):
 
 class PodLogMissMatchError(Exception):
     pass
+
+
+class ResourceMismatch(Exception):
+    pass
