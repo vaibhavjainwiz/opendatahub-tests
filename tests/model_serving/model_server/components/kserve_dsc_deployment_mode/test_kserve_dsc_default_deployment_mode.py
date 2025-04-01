@@ -45,7 +45,6 @@ INFERENCE_SERVICE_PARAMS = {
 class TestKServeDSCServerlessDefaultDeploymentMode:
     def test_isvc_contains_serverless_deployment_mode(
         self,
-        skip_if_serverless_annotation_bug_present,
         default_deployment_mode_in_dsc,
         ovms_inference_service,
     ):
@@ -75,7 +74,6 @@ class TestKServeDSCServerlessDefaultDeploymentMode:
     )
     def test_isvc_on_dsc_default_deployment_mode_change_to_raw(
         self,
-        skip_if_serverless_annotation_bug_present,
         patched_default_deployment_mode_in_dsc,
         ovms_inference_service,
     ):
@@ -93,7 +91,6 @@ class TestKServeDSCServerlessDefaultDeploymentMode:
     )
     def test_restarted_pod_is_serverless(
         self,
-        skip_if_serverless_annotation_bug_present,
         patched_default_deployment_mode_in_dsc,
         restarted_inference_pod,
     ):
