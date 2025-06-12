@@ -2,6 +2,7 @@ from typing import Generator, Any, Optional
 import re
 
 from kubernetes.dynamic import DynamicClient
+from ocp_resources.config_map import ConfigMap
 from ocp_resources.deployment import Deployment
 from ocp_resources.mariadb_operator import MariadbOperator
 from ocp_resources.maria_db import MariaDB
@@ -19,6 +20,7 @@ from utilities.constants import Timeout
 from timeout_sampler import retry
 
 from utilities.exceptions import TooManyPodsError, UnexpectedFailureError
+from utilities.general import wait_for_pods_by_labels, validate_container_images
 
 LOGGER = get_logger(name=__name__)
 
@@ -245,3 +247,38 @@ def create_isvc_getter_token_secret(
         type="kubernetes.io/service-account-token",
     ) as secret:
         yield secret
+
+
+def validate_trustyai_service_images(
+    client: DynamicClient,
+    related_images_refs: set[str],
+    model_namespace: Namespace,
+    label_selector: str,
+    trustyai_operator_configmap: ConfigMap,
+) -> None:
+    """Validates trustyai service images against a set of related images.
+
+    Args:
+        client: DynamicClient: The Kubernetes dynamic client.
+        related_images_refs: list[str]: Related images references from RHOAI CSV.
+        model_namespace: Namespace: namespace to run the test against.
+        label_selector: str: Label selector string to get the trustyai pod.
+        trustyai_operator_configmap: ConfigMap: The trustyai operator configmap.
+
+    Returns:
+        None
+
+    Raises:
+        AssertionError: If any of the related images references are not present or invalid.
+    """
+    tai_image_refs = set(
+        v
+        for k, v in trustyai_operator_configmap.instance.data.items()
+        if k in ["oauthProxyImage", "trustyaiServiceImage"]
+    )
+    trustyai_service_pod = wait_for_pods_by_labels(
+        admin_client=client, namespace=model_namespace.name, label_selector=label_selector, expected_num_pods=1
+    )[0]
+    validation_errors = validate_container_images(pod=trustyai_service_pod, valid_image_refs=tai_image_refs)
+    assert len(validation_errors) == 0, validation_errors
+    assert tai_image_refs.issubset(related_images_refs), "TrustyAI service container images are not present in CSV."
