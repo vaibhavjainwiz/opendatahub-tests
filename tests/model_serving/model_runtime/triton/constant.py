@@ -9,6 +9,7 @@ from utilities.constants import (
     Labels,
 )
 
+TRITON_SERVER_IMAGE = "nvcr.io/nvidia/tritonserver:23.05-py3"
 TRITON_INPUT_BASE_PATH = "tests/model_serving/model_runtime/triton/basic_model_deployment"
 
 TRITON_REST_INPUT_PATH = os.path.join(TRITON_INPUT_BASE_PATH, "kserve-triton-resnet-rest-input.json")

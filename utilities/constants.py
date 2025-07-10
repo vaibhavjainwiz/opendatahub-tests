@@ -73,6 +73,8 @@ class RuntimeTemplates:
     VLLM_GAUDUI: str = "vllm-gaudi-runtime-template"
     MLSERVER_GRPC: str = "mlserver-grpc-runtime-template"
     MLSERVER_REST: str = "mlserver-rest-runtime-template"
+    TRITON_REST: str = "triton-rest-runtime-template"
+    TRITON_GRPC: str = "triton-grpc-runtime-template"
 
 
 class ModelInferenceRuntime:

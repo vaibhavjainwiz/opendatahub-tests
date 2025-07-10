@@ -13,12 +13,12 @@ from ocp_resources.pod import Pod
 from ocp_resources.secret import Secret
 from ocp_resources.template import Template
 from ocp_resources.service_account import ServiceAccount
-from _pytest.fixtures import SubRequest
 
 from tests.model_serving.model_runtime.triton.constant import (
     PREDICT_RESOURCES,
     RUNTIME_MAP,
     ACCELERATOR_IDENTIFIER,
+    TRITON_SERVER_IMAGE,
 )
 from tests.model_serving.model_runtime.triton.basic_model_deployment.utils import (
     kserve_s3_endpoint_secret,
@@ -47,6 +47,11 @@ def root_dir(pytestconfig: pytest.Config) -> Any:
 @pytest.fixture(scope="session")
 def supported_accelerator_type(pytestconfig: pytest.Config) -> str:
     return py_config.get("accelerator_type", "nvidia")
+
+
+@pytest.fixture(scope="class")
+def protocol(request: pytest.FixtureRequest) -> str:
+    return request.param["protocol_type"]
 
 
 @pytest.fixture(scope="class")
@@ -104,7 +109,7 @@ def create_triton_serving_runtime(protocol: str) -> ServingRuntime:
     kserve_container: List[Dict[str, Any]] = [
         {
             "name": "kserve-container",
-            "image": "nvcr.io/nvidia/tritonserver:23.05-py3",
+            "image": TRITON_SERVER_IMAGE,
             "args": container_args,
             "ports": [port_config],
             "volumeMounts": volume_mounts,
@@ -146,11 +151,6 @@ def create_triton_serving_runtime(protocol: str) -> ServingRuntime:
 
 
 @pytest.fixture(scope="class")
-def protocol(request: pytest.FixtureRequest) -> str:
-    return request.param["protocol_type"]
-
-
-@pytest.fixture(scope="class")
 def triton_serving_runtime(
         request: pytest.FixtureRequest,
         admin_client: DynamicClient,
@@ -171,7 +171,7 @@ def triton_serving_runtime(
         yield model_runtime
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="function")
 def triton_inference_service(
         request: pytest.FixtureRequest,
         admin_client: DynamicClient,
@@ -221,7 +221,8 @@ def triton_inference_service(
 
 
 @pytest.fixture(scope="class")
-def triton_model_service_account(admin_client: DynamicClient, kserve_s3_secret: Secret) -> Generator[ServiceAccount, None, None]:
+def triton_model_service_account(admin_client: DynamicClient, kserve_s3_secret: Secret) -> Generator[
+    ServiceAccount, None, None]:
     with ServiceAccount(
             client=admin_client,
             namespace=kserve_s3_secret.namespace,
@@ -266,17 +267,3 @@ def triton_pod_resource(
     if not pods:
         raise RuntimeError(f"No pods found for InferenceService {triton_inference_service.name}")
     return pods[0]
-
-
-@pytest.fixture(autouse=True)
-def cleanup_existing_isvc(request: SubRequest, admin_client: DynamicClient, model_namespace: Namespace) -> None:
-    test_name = getattr(request.node, "callspec", None)
-    test_name = test_name.id if test_name else None
-    if test_name:
-        try:
-            isvc = InferenceService(name=test_name, namespace=model_namespace.name, client=admin_client)
-            if isvc.exists:
-                LOGGER.info(f"Cleaning up pre-existing InferenceService: {test_name}")
-                isvc.delete(wait=True)
-        except Exception as e:
-            LOGGER.warning(f"Error during cleanup of InferenceService '{test_name}': {e}")
